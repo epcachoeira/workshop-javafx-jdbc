@@ -3,6 +3,7 @@ package gui;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.function.Consumer;
 
 import application.Main;
 import gui.util.Alerts;
@@ -33,12 +34,15 @@ public class MainViewController implements Initializable {
 
 	@FXML
 	public void onMenuItemDepartmentAction() {
-		loadView2("/gui/DepartmentList.fxml");
+		loadView("/gui/DepartmentList.fxml", (DepartmentListController controller) -> {
+			controller.setDepartmentService(new DepartmentService());
+			controller.updateTableView();
+		});
 	}
 
 	@FXML
 	public void onMenuItemAboutAction() {
-		loadView("/gui/About.fxml");
+		loadView("/gui/About.fxml", x -> {});
 	}
 
 	@Override
@@ -46,7 +50,7 @@ public class MainViewController implements Initializable {
 
 	}
 
-	private synchronized void loadView(String absoluteView) {
+	private synchronized <T> void loadView(String absoluteView, Consumer<T> initializingAction) {
 		try {
 			FXMLLoader loader = new FXMLLoader(getClass().getResource(absoluteView));
 			VBox newVBox = loader.load();
@@ -60,34 +64,14 @@ public class MainViewController implements Initializable {
 			mainVBox.getChildren().add(mainMenu);
 			mainVBox.getChildren().addAll(newVBox.getChildren());
 			
-		} 
-		catch (IOException e) {
-			Alerts.showAlert("IO Exception", "Error load view", e.getMessage(), AlertType.ERROR);
-		}
-	}
-	
-	private synchronized void loadView2(String absoluteView) {
-		try {
-			FXMLLoader loader = new FXMLLoader(getClass().getResource(absoluteView));
-			VBox newVBox = loader.load();
-			
-			Scene mainScene = Main.getMainScene();  // Referência da janela principal
-			
-			VBox mainVBox = (VBox) ((ScrollPane) mainScene.getRoot()).getContent();
-			
-			Node mainMenu = mainVBox.getChildren().get(0); // Pega os filhos da janela principal
-			mainVBox.getChildren().clear();                // Limpa os filhos da janela principal
-			mainVBox.getChildren().add(mainMenu);
-			mainVBox.getChildren().addAll(newVBox.getChildren());
-			
-			// Carga dos dados dos departamentos
-			DepartmentListController controller = loader.getController();
-			controller.setDepartmentService(new DepartmentService());
-			controller.updateTableView();
+			// Execução da função passada como argumento
+			T controller = loader.getController();
+			initializingAction.accept(controller);
 			
 		} 
 		catch (IOException e) {
 			Alerts.showAlert("IO Exception", "Error load view", e.getMessage(), AlertType.ERROR);
 		}
 	}
+
 }
